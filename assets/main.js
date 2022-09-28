@@ -97,6 +97,7 @@ const inputLoanAmount = document.querySelector(".form__input--loan-amount");
 const inputCloseUsername = document.querySelector(".form__input--user");
 const inputClosePin = document.querySelector(".form__input--pin");
 
+//function display date in all transaction
 const formatMovementDate = function (date) {
   const calcDaysPassed = (date1, date2) =>
     Math.round(Math.abs(date2 - date1) / (1000 * 60 * 60 * 24));
@@ -187,7 +188,7 @@ const calcDisplaySummary = function (acc) {
 };
 
 //login
-let currentAccount;
+let currentAccount, timer;
 btnLogin.addEventListener("click", function (e) {
   e.preventDefault();
   currentAccount = accounts.find(
@@ -208,13 +209,44 @@ btnLogin.addEventListener("click", function (e) {
     labelDate.textContent = `${day}/${month}/${year}, ${hour}:${min}`;
 
     //display movements, balance and summary
-    updateUI(currentAccount);
 
     //clear input
     inputLoginPin.blur();
     inputLoginPin.value = inputLoginUsername.value = "";
+
+    //timer
+    if (timer) clearInterval(timer);
+    timer = startLogoutTimer();
+    updateUI(currentAccount);
   }
 });
+
+const startLogoutTimer = function () {
+  const tick = function () {
+    const min = String(Math.trunc(time / 60)).padStart(2, 0);
+    const sec = String(time % 60).padStart(2, 0);
+    //in each call, print the remaing time to ui
+    labelTimer.textContent = `${min}:${sec}`;
+
+    //wen we reach 0 seconds stop timer and log out the active user
+    if (time === 0) {
+      clearInterval(timer);
+      labelWelcome.textContent = "Log in to get started";
+      containerApp.style.opacity = 0;
+    }
+
+    //decrease 1s
+    time--;
+  };
+
+  //set time to 5 minutes
+  let time = 300;
+
+  //cal the time every second
+  tick();
+  const timer = setInterval(tick, 1000);
+  return timer;
+};
 
 btnTransfer.addEventListener("click", function (e) {
   e.preventDefault();
@@ -239,6 +271,10 @@ btnTransfer.addEventListener("click", function (e) {
 
     updateUI(currentAccount);
     inputTransferAmount.value = inputTransferTo.value = "";
+
+    //reset timer
+    clearInterval(timer);
+    timer = startLogoutTimer();
   }
 });
 
@@ -250,12 +286,17 @@ btnLoan.addEventListener("click", function (e) {
     amount > 0 &&
     currentAccount.movements.some((mov) => mov >= amount * 0.1)
   ) {
-    currentAccount.movements.push(amount);
-    currentAccount.movementsDates.push(new Date().toISOString());
-    updateUI(currentAccount);
+    setTimeout(function () {
+      currentAccount.movements.push(amount);
+      currentAccount.movementsDates.push(new Date().toISOString());
+      updateUI(currentAccount);
 
-    inputLoanAmount.value = "";
+      //reset timer
+      clearInterval(timer);
+      timer = startLogoutTimer();
+    }, 2500);
   }
+  inputLoanAmount.value = "";
 });
 
 //delete account
@@ -270,6 +311,7 @@ btnClose.addEventListener("click", function (e) {
     );
     accounts.splice(index, 1);
     containerApp.style.opacity = 0;
+    labelWelcome.textContent = "Log in to get started";
     inputCloseUsername.value = inputClosePin.value = "";
   }
 });
